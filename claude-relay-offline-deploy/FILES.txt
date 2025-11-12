@@ -1,0 +1,175 @@
+Claude Relay Service - 内网部署版本文件清单
+================================================
+
+项目路径: e:\claudecode\github002\claude-relay-service\
+创建时间: 2025-01-12
+
+核心配置文件
+-----------
+docker-compose.yml              内网部署版 Docker Compose 配置（主配置）
+docker-compose.official.yml     官方原始 Docker Compose 配置（备份）
+Dockerfile                      Docker 镜像构建文件
+docker-entrypoint.sh           容器启动脚本
+.env.example                    环境变量配置模板
+.gitignore.deployment          Git 忽略规则配置
+
+部署脚本 (Linux/macOS)
+---------------------
+build.sh                        构建 Docker 镜像
+export-images.sh                导出镜像并自动分卷（45MB/个）
+load-images.sh                  在内网服务器加载镜像
+init-env.sh                     初始化环境配置和生成密钥
+deploy.sh                       统一部署管理脚本（start/stop/restart/status/logs/clean）
+
+部署脚本 (Windows)
+-----------------
+deploy.bat                      Windows 部署管理脚本
+init-env.bat                    Windows 环境初始化脚本
+
+文档文件
+--------
+README-INTRANET.md              内网部署主文档（快速参考）
+README-DEPLOYMENT.md            完整部署指南（详细说明）
+QUICKSTART.md                   5 分钟快速开始指南
+PROJECT-SUMMARY.md              项目技术总结和架构说明
+QUICK-REFERENCE.md              快速参考卡片（常用命令速查）
+README.md                       官方原始中文文档
+README_EN.md                    官方原始英文文档
+
+项目说明文档 (docs 目录)
+-----------------------
+docs/claude-relay-service-deployment.md  项目整体说明
+docs/DEPLOYMENT-SUMMARY.md              项目完成总结
+
+官方源代码文件
+-------------
+src/                            应用源代码目录
+web/                            Web 前端源代码目录
+config/                         配置文件目录
+scripts/                        辅助脚本目录
+cli/                            命令行工具目录
+resources/                      资源文件目录
+package.json                    Node.js 项目配置
+package-lock.json              Node.js 依赖锁定文件
+
+运行时目录（自动生成）
+--------------------
+data/logs/                      应用日志目录
+data/app/                       应用数据目录（账户、API Key 等）
+data/redis/                     Redis 数据持久化目录
+images/                         Docker 镜像导出目录（包含分卷文件）
+
+脚本功能说明
+-----------
+build.sh:
+  - 构建 Claude Relay Service Docker 镜像
+  - 拉取 Redis 官方镜像
+  - 验证镜像构建结果
+
+export-images.sh:
+  - 导出 Docker 镜像为 tar.gz 格式
+  - 自动分卷为 45MB 小文件（适合 Git 上传限制）
+  - 生成 SHA256 校验文件
+
+load-images.sh:
+  - 验证镜像文件完整性
+  - 自动合并分卷文件
+  - 加载镜像到 Docker
+
+init-env.sh:
+  - 自动生成安全密钥（JWT、加密密钥、Redis 密码）
+  - 创建 .env 配置文件
+  - 初始化数据目录结构
+
+deploy.sh:
+  - start: 启动服务
+  - stop: 停止服务
+  - restart: 重启服务
+  - status: 查看服务状态
+  - logs: 查看服务日志
+  - clean: 清理并重启服务
+
+文档阅读顺序建议
+--------------
+1. README-INTRANET.md          快速了解项目
+2. QUICKSTART.md               5 分钟快速部署
+3. QUICK-REFERENCE.md          常用命令速查
+4. README-DEPLOYMENT.md        详细部署指南
+5. PROJECT-SUMMARY.md          技术细节和架构
+
+快速命令参考
+-----------
+# 有外网环境构建
+./build.sh && ./export-images.sh
+
+# 内网服务器部署
+./load-images.sh && ./init-env.sh && ./deploy.sh start
+
+# 直接部署（有外网）
+./init-env.sh && ./deploy.sh start
+
+# 查看管理员凭据
+cat ./data/app/init.json
+
+# 访问管理界面
+http://localhost:3000/web
+
+关键特性
+--------
+✓ Docker 容器化部署
+✓ 完全离线内网部署
+✓ 镜像自动分卷（适合 Git）
+✓ 一键初始化和部署
+✓ 跨平台支持（Linux/macOS/Windows）
+✓ 数据持久化映射主机目录
+✓ 自动密钥生成
+✓ 完整的文档体系
+
+技术栈
+------
+- Docker & Docker Compose
+- Node.js 18
+- Redis 7 Alpine
+- Vue.js (Web 前端)
+- Bash/Batch 脚本
+
+系统要求
+--------
+- CPU: 1 核心+
+- 内存: 512MB+（推荐 1GB）
+- 磁盘: 10GB+
+- Docker: 20.10+
+- Docker Compose: 1.29+
+
+注意事项
+--------
+1. .env 文件包含敏感信息，不要提交到 Git
+2. 首次部署前必须运行 init-env.sh 生成密钥
+3. 数据目录（./data）需要定期备份
+4. 重新生成密钥会导致无法访问旧的 Redis 数据
+5. 生产环境建议配置反向代理和 HTTPS
+
+许可和免责
+---------
+本项目基于官方 Claude Relay Service 进行内网部署优化
+仅供学习和研究使用
+使用本服务可能违反 Anthropic 的服务条款
+用户需自行承担使用风险
+
+项目状态
+--------
+✅ 完成所有开发任务
+✅ 文档编写完整
+✅ 脚本测试通过
+✅ 可投入使用
+
+支持和帮助
+---------
+- 官方项目: https://github.com/Wei-Shaw/claude-relay-service
+- 部署问题: 查看 README-DEPLOYMENT.md
+- 快速排查: 查看 QUICK-REFERENCE.md
+
+版本信息
+--------
+版本: v1.0.0
+日期: 2025-01-12
