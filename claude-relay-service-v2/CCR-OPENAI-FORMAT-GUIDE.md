@@ -90,6 +90,69 @@
 
 ---
 
+## 2. 通过 Web 管理界面配置（推荐）
+
+### 2.1 访问管理界面
+
+1. 在浏览器中打开: `http://your-server:3006/admin-next`
+2. 使用管理员账户登录
+3. 导航到左侧菜单 → **CCR 账户** 页面
+
+### 2.2 创建 OpenAI 格式 CCR 账户
+
+点击 **"+ 创建账户"** 按钮，填写以下配置：
+
+#### 基础信息
+
+| 字段 | 说明 | 示例值 |
+|------|------|--------|
+| **账户名称** | 自定义账户名称 | `本地 Qwen3-OpenAI` |
+| **描述** | 账户说明（可选） | `Qwen3-235B 通过 OpenAI API 格式` |
+| **API URL** | 后端基础地址 | `https://your-domain.com/test` |
+| **API Key** | 后端 API 密钥 | `sk-your-local-key` |
+| **优先级** | 1-100，数值越大优先级越高 | `100` |
+
+⚠️ **重要**: API URL 填写基础地址即可，**不需要**添加 `/v1/messages` 或 `/v1/chat/completions` 后缀。
+
+#### API 格式配置（v2.0 新增）
+
+| 字段 | 说明 | 选项 |
+|------|------|------|
+| **API 格式** | 后端 API 端点格式 | ✅ `OpenAI - /v1/chat/completions`<br>□ `Claude (默认) - /v1/messages` |
+| **响应格式** | 后端响应格式 | ✅ `OpenAI - 自动转换为 Claude 格式`<br>□ `Claude (默认)` |
+
+**选择说明**:
+- 如果您的后端是 vLLM、FastChat、Ollama 等 OpenAI 兼容服务，两个下拉框都选择 `OpenAI`
+- 系统会自动将 API URL 拼接为 `https://your-domain.com/test/v1/chat/completions`
+- 请求会从 Claude 格式自动转换为 OpenAI 格式
+- 响应会从 OpenAI 格式自动转换回 Claude 格式
+
+#### 模型映射配置
+
+在 **"支持的模型"** 区域配置模型映射表（JSON 格式）:
+
+```json
+{
+  "claude-sonnet-4-5-20250929": "qwen3-235b-a22b",
+  "claude-opus-4-1-20250805": "qwen3-vl-235b-a22b-instruct-fp8",
+  "gpt-4o": "qwen3-32b"
+}
+```
+
+**说明**:
+- 键 (左侧): Claude Code 请求的模型名
+- 值 (右侧): 后端实际的模型名
+
+### 2.3 保存并测试
+
+1. 点击 **"保存"** 按钮
+2. 在 CCR 账户列表中找到刚创建的账户
+3. 点击 **"测试连接"** 按钮验证配置
+
+✅ **预期结果**: 显示 "连接成功" 消息
+
+---
+
 ## 配置场景
 
 ### 场景 1: 使用 OpenAI 兼容 API（推荐）

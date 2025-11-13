@@ -543,8 +543,17 @@ class CcrRelayService {
 
                   // 应用流转换器（如果提供）
                   let outputLine = line
+
+                  // 🔄 如果响应格式是 OpenAI，先转换为 Claude 格式
+                  if (responseFormat === 'openai' && line.startsWith('data: ')) {
+                    const convertedChunk = responseFormatConverter.convertOpenAIStreamChunkToClaude(line)
+                    if (convertedChunk) {
+                      outputLine = convertedChunk.trimEnd() // 移除末尾换行，因为下面会添加
+                    }
+                  }
+
                   if (streamTransformer && typeof streamTransformer === 'function') {
-                    outputLine = streamTransformer(line)
+                    outputLine = streamTransformer(outputLine)
                   }
 
                   // 写入到响应流
@@ -637,7 +646,7 @@ class CcrRelayService {
 
         const jsonData = JSON.parse(data)
 
-        // 检查是否包含使用统计信息
+        // 检查是否包含使用统计信息 (Claude 格式)
         if (jsonData.usage) {
           return {
             input_tokens: jsonData.usage.input_tokens || 0,
@@ -652,7 +661,7 @@ class CcrRelayService {
           }
         }
 
-        // 检查 message_delta 事件中的使用统计
+        // 检查 message_delta 事件中的使用统计 (Claude 格式)
         if (jsonData.type === 'message_delta' && jsonData.delta && jsonData.delta.usage) {
           return {
             input_tokens: jsonData.delta.usage.input_tokens || 0,
@@ -663,6 +672,17 @@ class CcrRelayService {
               jsonData.delta.usage.cache_creation_input_tokens_ephemeral_5m || 0,
             cache_creation_input_tokens_ephemeral_1h:
               jsonData.delta.usage.cache_creation_input_tokens_ephemeral_1h || 0
+          }
+        }
+
+        // 检查 OpenAI stream chunk 格式的使用统计
+        // OpenAI 在最后一个 chunk 中可能包含 usage 字段
+        if (jsonData.object === 'chat.completion.chunk' && jsonData.usage) {
+          return {
+            input_tokens: jsonData.usage.prompt_tokens || 0,
+            output_tokens: jsonData.usage.completion_tokens || 0,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0
           }
         }
       }

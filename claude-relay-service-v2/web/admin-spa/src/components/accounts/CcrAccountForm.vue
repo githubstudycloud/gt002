@@ -61,11 +61,14 @@
                 v-model="form.apiUrl"
                 class="form-input w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                 :class="{ 'border-red-500': errors.apiUrl }"
-                placeholder="例如：https://api.example.com/v1/messages"
+                placeholder="例如：https://api.example.com"
                 required
                 type="text"
               />
               <p v-if="errors.apiUrl" class="mt-1 text-xs text-red-500">{{ errors.apiUrl }}</p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                基础地址，系统会根据 API 格式自动拼接端点
+              </p>
             </div>
             <div>
               <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300"
@@ -80,6 +83,40 @@
                 type="password"
               />
               <p v-if="errors.apiKey" class="mt-1 text-xs text-red-500">{{ errors.apiKey }}</p>
+            </div>
+          </div>
+
+          <!-- API 格式配置 -->
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                >API 格式</label
+              >
+              <select
+                v-model="form.apiFormat"
+                class="form-select w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+              >
+                <option value="claude">Claude (默认) - /v1/messages</option>
+                <option value="openai">OpenAI - /v1/chat/completions</option>
+              </select>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                后端 API 端点格式
+              </p>
+            </div>
+            <div>
+              <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                >响应格式</label
+              >
+              <select
+                v-model="form.responseFormat"
+                class="form-select w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+              >
+                <option value="claude">Claude (默认)</option>
+                <option value="openai">OpenAI - 自动转换为 Claude 格式</option>
+              </select>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                后端响应格式，选择 OpenAI 会自动转换
+              </p>
             </div>
           </div>
 
@@ -287,7 +324,9 @@ const form = ref({
   dailyQuota: 0,
   quotaResetTime: '00:00',
   proxy: null,
-  supportedModels: {}
+  supportedModels: {},
+  apiFormat: 'claude', // 默认 claude 格式
+  responseFormat: 'claude' // 默认 claude 格式
 })
 
 const enableRateLimit = ref(true)
@@ -339,7 +378,9 @@ const submit = async () => {
         dailyQuota: Number(form.value.dailyQuota || 0),
         quotaResetTime: form.value.quotaResetTime || '00:00',
         proxy: form.value.proxy || null,
-        supportedModels: buildSupportedModels()
+        supportedModels: buildSupportedModels(),
+        apiFormat: form.value.apiFormat || 'claude',
+        responseFormat: form.value.responseFormat || 'claude'
       }
       if (form.value.apiKey && form.value.apiKey.trim().length > 0) {
         updates.apiKey = form.value.apiKey
@@ -365,7 +406,9 @@ const submit = async () => {
         proxy: form.value.proxy,
         accountType: 'shared',
         dailyQuota: Number(form.value.dailyQuota || 0),
-        quotaResetTime: form.value.quotaResetTime || '00:00'
+        quotaResetTime: form.value.quotaResetTime || '00:00',
+        apiFormat: form.value.apiFormat || 'claude',
+        responseFormat: form.value.responseFormat || 'claude'
       }
       const res = await apiClient.post('/admin/ccr-accounts', payload)
       if (res.success) {
@@ -394,6 +437,8 @@ const populateFromAccount = () => {
   form.value.dailyQuota = Number(a.dailyQuota || 0)
   form.value.quotaResetTime = a.quotaResetTime || '00:00'
   form.value.proxy = a.proxy || null
+  form.value.apiFormat = a.apiFormat || 'claude'
+  form.value.responseFormat = a.responseFormat || 'claude'
   enableRateLimit.value = form.value.rateLimitDuration > 0
 
   // supportedModels 对象转为数组

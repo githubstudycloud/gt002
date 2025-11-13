@@ -22,7 +22,7 @@ FROM node:18-alpine
 # 📋 设置标签
 LABEL maintainer="claude-relay-service@example.com"
 LABEL description="Claude Code API Relay Service"
-LABEL version="1.0.0"
+LABEL version="2.1.0"
 
 # 🔧 安装系统依赖
 RUN apk add --no-cache \

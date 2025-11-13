@@ -1107,6 +1107,40 @@
                 </p>
               </div>
 
+              <!-- API 格式配置 -->
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >API 格式</label
+                  >
+                  <select
+                    v-model="form.apiFormat"
+                    class="form-select w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                  >
+                    <option value="claude">Claude (默认) - /v1/messages</option>
+                    <option value="openai">OpenAI - /v1/chat/completions</option>
+                  </select>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    后端 API 端点格式
+                  </p>
+                </div>
+                <div>
+                  <label class="mb-3 block text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >响应格式</label
+                  >
+                  <select
+                    v-model="form.responseFormat"
+                    class="form-select w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                  >
+                    <option value="claude">Claude (默认)</option>
+                    <option value="openai">OpenAI - 自动转换为 Claude 格式</option>
+                  </select>
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    后端响应格式，选择 OpenAI 会自动转换
+                  </p>
+                </div>
+              </div>
+
               <!-- 额度管理字段 -->
               <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -3569,6 +3603,8 @@ const form = ref({
   // Claude Console 特定字段
   apiUrl: props.account?.apiUrl || '',
   apiKey: props.account?.apiKey || '',
+  apiFormat: props.account?.apiFormat || 'claude',
+  responseFormat: props.account?.responseFormat || 'claude',
   priority: props.account?.priority || 50,
   endpointType: props.account?.endpointType || 'anthropic',
   // OpenAI-Responses 特定字段
@@ -4481,6 +4517,8 @@ const createAccount = async () => {
       // Claude Console 和 CCR 账户特定数据（CCR 使用 Claude Console 的后端逻辑）
       data.apiUrl = form.value.apiUrl
       data.apiKey = form.value.apiKey
+      data.apiFormat = form.value.apiFormat || 'claude'
+      data.responseFormat = form.value.responseFormat || 'claude'
       data.priority = form.value.priority || 50
       data.supportedModels = convertMappingsToObject() || {}
       data.userAgent = form.value.userAgent || null
@@ -4495,6 +4533,8 @@ const createAccount = async () => {
       // OpenAI-Responses 账户特定数据
       data.baseApi = form.value.baseApi
       data.apiKey = form.value.apiKey
+      data.apiFormat = form.value.apiFormat || 'claude'
+      data.responseFormat = form.value.responseFormat || 'claude'
       data.userAgent = form.value.userAgent || ''
       data.priority = form.value.priority || 50
       data.rateLimitDuration = 60 // 默认值60，不从用户输入获取
@@ -4785,6 +4825,8 @@ const updateAccount = async () => {
       if (form.value.apiKey) {
         data.apiKey = form.value.apiKey
       }
+      data.apiFormat = form.value.apiFormat || 'claude'
+      data.responseFormat = form.value.responseFormat || 'claude'
       data.priority = form.value.priority || 50
       data.supportedModels = convertMappingsToObject() || {}
       data.userAgent = form.value.userAgent || null
@@ -4803,6 +4845,8 @@ const updateAccount = async () => {
       if (form.value.apiKey) {
         data.apiKey = form.value.apiKey
       }
+      data.apiFormat = form.value.apiFormat || 'claude'
+      data.responseFormat = form.value.responseFormat || 'claude'
       data.userAgent = form.value.userAgent || ''
       data.priority = form.value.priority || 50
       // 编辑时不上传 rateLimitDuration，保持原值
@@ -5351,6 +5395,8 @@ watch(
         // Claude Console 特定字段
         apiUrl: newAccount.apiUrl || '',
         apiKey: '', // 编辑模式不显示现有的 API Key
+        apiFormat: newAccount.apiFormat || 'claude',
+        responseFormat: newAccount.responseFormat || 'claude',
         priority: newAccount.priority || 50,
         supportedModels: (() => {
           const models = newAccount.supportedModels
