@@ -66,7 +66,10 @@ chmod +x *.sh
 
 ## 文档
 
+- [OFFLINE-DEPLOYMENT-VERIFIED.md](OFFLINE-DEPLOYMENT-VERIFIED.md) - ✅ **离线部署验证报告（已完整测试）**
 - [QUICKSTART.md](QUICKSTART.md) - 快速开始指南（5分钟部署）
+- [FIX-SUMMARY.md](FIX-SUMMARY.md) - docker-entrypoint.sh 问题修复说明
+- [CUSTOM-MODEL-SETUP.md](CUSTOM-MODEL-SETUP.md) - 自定义开源模型接入指南
 - [QUICK-REFERENCE.md](QUICK-REFERENCE.md) - 命令速查卡片
 - [README-DEPLOYMENT.md](README-DEPLOYMENT.md) - 完整部署文档
 - [PROJECT-SUMMARY.md](PROJECT-SUMMARY.md) - 技术架构总结
