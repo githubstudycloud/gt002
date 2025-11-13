@@ -3,6 +3,7 @@ const ccrAccountService = require('./ccrAccountService')
 const logger = require('../utils/logger')
 const config = require('../../config/config')
 const { parseVendorPrefixedModel } = require('../utils/modelHelper')
+const responseFormatConverter = require('../utils/responseFormatConverter')
 
 class CcrRelayService {
   constructor() {
@@ -54,10 +55,22 @@ class CcrRelayService {
         }
       }
 
+      // 获取 API 格式配置
+      const apiFormat = account.apiFormat || 'claude' // 默认 claude 格式
+      const responseFormat = account.responseFormat || 'claude' // 默认 claude 格式
+
       // 创建修改后的请求体，使用去前缀后的模型名
-      const modifiedRequestBody = {
+      let modifiedRequestBody = {
         ...requestBody,
         model: mappedModel
+      }
+
+      // 如果后端是 OpenAI 格式，转换请求体
+      if (apiFormat === 'openai') {
+        logger.debug('🔄 Converting Claude request to OpenAI format')
+        modifiedRequestBody = responseFormatConverter.convertClaudeRequestToOpenAI(
+          modifiedRequestBody
+        )
       }
 
       // 创建代理agent
@@ -88,11 +101,19 @@ class CcrRelayService {
 
       if (options.customPath) {
         // 如果指定了自定义路径（如 count_tokens），使用它
-        const baseUrl = cleanUrl.replace(/\/v1\/messages$/, '') // 移除已有的 /v1/messages
+        const baseUrl = cleanUrl.replace(/\/v1\/messages$/, '').replace(/\/v1\/chat\/completions$/, '')
         apiEndpoint = `${baseUrl}${options.customPath}`
       } else {
-        // 默认使用 messages 端点
-        apiEndpoint = cleanUrl.endsWith('/v1/messages') ? cleanUrl : `${cleanUrl}/v1/messages`
+        // 根据 API 格式选择端点
+        if (apiFormat === 'openai') {
+          // OpenAI 格式: /v1/chat/completions
+          apiEndpoint = cleanUrl.endsWith('/v1/chat/completions')
+            ? cleanUrl
+            : `${cleanUrl}/v1/chat/completions`
+        } else {
+          // Claude 格式: /v1/messages (默认)
+          apiEndpoint = cleanUrl.endsWith('/v1/messages') ? cleanUrl : `${cleanUrl}/v1/messages`
+        }
       }
 
       logger.debug(`🎯 Final API endpoint: ${apiEndpoint}`)
@@ -210,9 +231,21 @@ class CcrRelayService {
       // 更新最后使用时间
       await this._updateLastUsedTime(accountId)
 
+      // 处理响应格式转换
+      let responseData = response.data
+      if (response.status === 200 || response.status === 201) {
+        // 如果响应格式设置为 openai，且后端返回的是 OpenAI 格式，则转换为 Claude 格式
+        if (responseFormat === 'openai' && typeof responseData === 'object') {
+          if (responseFormatConverter.isOpenAIFormat(responseData)) {
+            logger.debug('🔄 Converting OpenAI response to Claude format')
+            responseData = responseFormatConverter.convertOpenAIToClaude(responseData)
+          }
+        }
+      }
+
       const responseBody =
-        typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
-      logger.debug(`[DEBUG] Final response body to return: ${responseBody}`)
+        typeof responseData === 'string' ? responseData : JSON.stringify(responseData)
+      logger.debug(`[DEBUG] Final response body to return: ${responseBody.substring(0, 200)}...`)
 
       return {
         statusCode: response.status,
@@ -260,6 +293,10 @@ class CcrRelayService {
       )
       logger.debug(`🌐 Account API URL: ${account.apiUrl}`)
 
+      // 获取 API 格式配置
+      const apiFormat = account.apiFormat || 'claude'
+      const responseFormat = account.responseFormat || 'claude'
+
       // 处理模型前缀解析和映射
       const { baseModel } = parseVendorPrefixedModel(requestBody.model)
       logger.debug(`🔄 Parsed base model: ${baseModel} from original: ${requestBody.model}`)
@@ -278,9 +315,17 @@ class CcrRelayService {
       }
 
       // 创建修改后的请求体，使用去前缀后的模型名
-      const modifiedRequestBody = {
+      let modifiedRequestBody = {
         ...requestBody,
         model: mappedModel
+      }
+
+      // 如果后端是 OpenAI 格式，转换请求体
+      if (apiFormat === 'openai') {
+        logger.debug('🔄 [Stream] Converting Claude request to OpenAI format')
+        modifiedRequestBody = responseFormatConverter.convertClaudeRequestToOpenAI(
+          modifiedRequestBody
+        )
       }
 
       // 创建代理agent
@@ -296,7 +341,9 @@ class CcrRelayService {
         accountId,
         usageCallback,
         streamTransformer,
-        options
+        options,
+        apiFormat,
+        responseFormat
       )
 
       // 更新最后使用时间
@@ -317,16 +364,30 @@ class CcrRelayService {
     accountId,
     usageCallback,
     streamTransformer = null,
-    requestOptions = {}
+    requestOptions = {},
+    apiFormat = 'claude',
+    responseFormat = 'claude'
   ) {
     return new Promise((resolve, reject) => {
       let aborted = false
 
       // 构建完整的API URL
       const cleanUrl = account.apiUrl.replace(/\/$/, '') // 移除末尾斜杠
-      const apiEndpoint = cleanUrl.endsWith('/v1/messages') ? cleanUrl : `${cleanUrl}/v1/messages`
+      let apiEndpoint
+
+      // 根据 API 格式选择端点
+      if (apiFormat === 'openai') {
+        // OpenAI 格式: /v1/chat/completions
+        apiEndpoint = cleanUrl.endsWith('/v1/chat/completions')
+          ? cleanUrl
+          : `${cleanUrl}/v1/chat/completions`
+      } else {
+        // Claude 格式: /v1/messages (默认)
+        apiEndpoint = cleanUrl.endsWith('/v1/messages') ? cleanUrl : `${cleanUrl}/v1/messages`
+      }
 
       logger.debug(`🎯 Final API endpoint for stream: ${apiEndpoint}`)
+      logger.debug(`🔧 API Format: ${apiFormat}, Response Format: ${responseFormat}`)
 
       // 过滤客户端请求头
       const filteredHeaders = this._filterClientHeaders(clientHeaders)

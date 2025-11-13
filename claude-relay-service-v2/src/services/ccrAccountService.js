@@ -49,7 +49,9 @@ class CcrAccountService {
       accountType = 'shared', // 'dedicated' or 'shared'
       schedulable = true, // 是否可被调度
       dailyQuota = 0, // 每日额度限制（美元），0表示不限制
-      quotaResetTime = '00:00' // 额度重置时间（HH:mm格式）
+      quotaResetTime = '00:00', // 额度重置时间（HH:mm格式）
+      apiFormat = 'claude', // 'claude' 或 'openai'，指定后端 API 格式
+      responseFormat = 'claude' // 'claude' 或 'openai'，指定响应格式（用于格式转换）
     } = options
 
     // 验证必填字段
@@ -80,6 +82,10 @@ class CcrAccountService {
       // ✅ 新增：账户订阅到期时间（业务字段，手动管理）
       // 注意：CCR 使用 API Key 认证，没有 OAuth token，因此没有 expiresAt
       subscriptionExpiresAt: options.subscriptionExpiresAt || null,
+
+      // ✅ 新增：API 格式和响应格式配置
+      apiFormat: apiFormat || 'claude', // 后端 API 格式（claude/openai）
+      responseFormat: responseFormat || 'claude', // 响应格式（claude/openai）
 
       createdAt: new Date().toISOString(),
       lastUsedAt: '',
@@ -173,6 +179,10 @@ class CcrAccountService {
 
             // ✅ 前端显示订阅过期时间（业务字段）
             expiresAt: accountData.subscriptionExpiresAt || null,
+
+            // ✅ API 格式配置
+            apiFormat: accountData.apiFormat || 'claude',
+            responseFormat: accountData.responseFormat || 'claude',
 
             // 额度管理相关
             dailyQuota: parseFloat(accountData.dailyQuota || '0'),
@@ -301,6 +311,14 @@ class CcrAccountService {
       // CCR 使用 API Key，没有 token 刷新逻辑，不会覆盖此字段
       if (updates.subscriptionExpiresAt !== undefined) {
         updatedData.subscriptionExpiresAt = updates.subscriptionExpiresAt
+      }
+
+      // ✅ API 格式配置更新
+      if (updates.apiFormat !== undefined) {
+        updatedData.apiFormat = updates.apiFormat
+      }
+      if (updates.responseFormat !== undefined) {
+        updatedData.responseFormat = updates.responseFormat
       }
 
       await client.hset(`${this.ACCOUNT_KEY_PREFIX}${accountId}`, updatedData)
