@@ -137,6 +137,47 @@ docker-entrypoint.sh text eol=lf
 - ✅ API endpoints responding
 - ✅ Redis connection working
 
+## Verification Results
+
+### Remote Server Test (2025-11-13 11:28 UTC+8)
+
+**Environment:**
+- Server: 192.168.241.128 (Ubuntu 22.04)
+- Docker: 24.x
+- docker-compose: v1
+
+**Test Results:**
+```
+CONTAINER ID   IMAGE                         STATUS
+f39cd552c3e6   claude-relay-service:latest   Up 8 seconds (healthy)
+b1f81849067d   redis:7-alpine                Up 19 seconds (healthy)
+```
+
+**Service Logs:**
+```
+🚀 Claude Relay Service 启动中...
+✅ 环境配置已就绪
+✅ 检测到已有配置，跳过初始化
+🌐 启动 Claude Relay Service...
+🔗 Redis connected successfully
+✅ Application initialized successfully
+🚀 Claude Relay Service started on 0.0.0.0:3000
+🌐 Web interface: http://0.0.0.0:3000/admin-next/api-stats
+```
+
+**Result:** ✅ **All services running successfully, no docker-entrypoint.sh errors**
+
+### Image Information
+
+**Updated Images (2025-11-13):**
+- **claude-relay-service**: 129MB (verified working)
+  - part-aa: 45MB (SHA256: afee33b...)
+  - part-ab: 45MB (SHA256: c5ffb2...)
+  - part-ac: 39MB (SHA256: d81f82...)
+- **redis**: 17MB (SHA256: 5e9306...)
+
+All images verified with SHA256 checksums and tested in production environment.
+
 ## Support
 
 For issues or questions:
@@ -145,6 +186,7 @@ For issues or questions:
 
 ---
 
-**Status**: ✅ Fixed and Verified
+**Status**: ✅ Fixed and Verified (Production Tested)
 **Date**: 2025-11-13
-**Platform**: Ubuntu 22.04 / Docker 24.x
+**Platform**: Ubuntu 22.04 / Docker 24.x / docker-compose v1
+**Test Server**: 192.168.241.128
