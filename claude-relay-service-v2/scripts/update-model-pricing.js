@@ -227,6 +227,23 @@ async function main() {
   // 确保数据目录存在
   ensureDataDir()
 
+  // ⚠️ 内网部署模式检查
+  if (!config.pricingUrl) {
+    log.warn('Price mirror is disabled (offline mode)')
+    log.info('Using local fallback data instead of downloading...')
+    if (useFallback()) {
+      console.log(
+        `\n${colors.green}✅ Model pricing initialized from local fallback (offline mode)${colors.reset}`
+      )
+      process.exit(0)
+    } else {
+      console.log(
+        `\n${colors.red}❌ Failed to initialize pricing from fallback${colors.reset}`
+      )
+      process.exit(1)
+    }
+  }
+
   // 备份现有文件
   const hasBackup = backupExistingFile()
 

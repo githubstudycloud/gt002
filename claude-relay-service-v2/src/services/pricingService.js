@@ -85,7 +85,15 @@ class PricingService {
         logger.info('📁 Created data directory')
       }
 
-      // 检查是否需要下载或更新价格数据
+      // ⚠️ 内网部署模式：跳过网络下载，直接使用本地 fallback
+      if (!pricingSource.enablePriceMirror) {
+        logger.info('🌐 Price mirror disabled (offline mode), using local fallback')
+        await this.useFallback()
+        logger.success('💰 Pricing service initialized successfully (offline mode)')
+        return
+      }
+
+      // 外网模式：检查是否需要下载或更新价格数据
       await this.checkAndUpdatePricing()
 
       // 初次启动时执行一次哈希校验，确保与远端保持一致
