@@ -1,0 +1,30 @@
+{
+  "name": "web-to-markdown-extension",
+  "version": "1.0.0",
+  "description": "Convert web pages to Markdown with media downloads, bypassing copy restrictions",
+  "main": "src/background/service-worker.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch",
+    "test": "jest"
+  },
+  "keywords": [
+    "markdown",
+    "web-clipper",
+    "chrome-extension",
+    "html-to-markdown"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "turndown": "^7.1.2",
+    "turndown-plugin-gfm": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.254",
+    "copy-webpack-plugin": "^11.0.0",
+    "jest": "^29.7.0",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

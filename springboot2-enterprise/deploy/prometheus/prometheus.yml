@@ -1,0 +1,104 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'enterprise-cluster'
+    env: 'production'
+
+# Alertmanager 配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# 规则文件
+rule_files:
+  # - "rules/*.yml"
+
+# 抓取配置
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Spring Boot 应用监控（通过 Kubernetes 服务发现）
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - enterprise
+    relabel_configs:
+      # 只抓取有 prometheus.io/scrape: "true" 注解的 Pod
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      # 从注解中读取端口
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: ([^:]+)(?::\d+)?
+        replacement: $1:$2
+      # 从注解中读取路径
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      # 添加 Pod 标签
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app
+      - source_labels: [__meta_kubernetes_pod_label_version]
+        target_label: version
+
+  # Spring Boot 应用监控（Docker Compose 环境）
+  - job_name: 'spring-boot-apps'
+    static_configs:
+      - targets:
+          - 'user-service:8081'
+        labels:
+          app: 'user-service'
+          env: 'docker'
+    metrics_path: '/actuator/prometheus'
+
+  # MySQL 监控（需要 mysqld_exporter）
+  - job_name: 'mysql'
+    static_configs:
+      - targets:
+          # - 'mysqld-exporter:9104'
+
+  # Redis 监控（需要 redis_exporter）
+  - job_name: 'redis'
+    static_configs:
+      - targets:
+          # - 'redis-exporter:9121'
+
+  # Node Exporter 监控
+  - job_name: 'node-exporter'
+    kubernetes_sd_configs:
+      - role: node
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '(.*):10250'
+        replacement: '${1}:9100'
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_node_name]
+        target_label: node
+
+  # Nacos 监控
+  - job_name: 'nacos'
+    metrics_path: '/nacos/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'nacos:8848'
+
+  # Sentinel 监控
+  - job_name: 'sentinel'
+    static_configs:
+      - targets:
+          # - 'sentinel:8719'

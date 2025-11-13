@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web to Markdown</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📝 Web to Markdown</h1>
+      <p class="subtitle">Convert web pages to Markdown format</p>
+    </header>
+
+    <section class="page-info">
+      <div class="info-item">
+        <span class="label">Page:</span>
+        <span class="value" id="page-title">Loading...</span>
+      </div>
+      <div class="info-item">
+        <span class="label">URL:</span>
+        <span class="value small" id="page-url">-</span>
+      </div>
+    </section>
+
+    <section class="statistics">
+      <div class="stat">
+        <div class="stat-value" id="stat-words">-</div>
+        <div class="stat-label">Words</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-images">-</div>
+        <div class="stat-label">Images</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-links">-</div>
+        <div class="stat-label">Links</div>
+      </div>
+    </section>
+
+    <section class="options">
+      <h2>Options</h2>
+
+      <label class="option">
+        <input type="checkbox" id="opt-download-media" checked>
+        <span>Download media files</span>
+      </label>
+
+      <label class="option">
+        <input type="checkbox" id="opt-lazy-images" checked>
+        <span>Load lazy images</span>
+      </label>
+
+      <label class="option">
+        <input type="checkbox" id="opt-wait-dynamic">
+        <span>Wait for dynamic content</span>
+      </label>
+
+      <label class="option">
+        <input type="checkbox" id="opt-metadata" checked>
+        <span>Include metadata</span>
+      </label>
+    </section>
+
+    <section class="actions">
+      <button id="btn-convert-page" class="btn btn-primary">
+        Convert Entire Page
+      </button>
+
+      <button id="btn-convert-selection" class="btn btn-secondary">
+        Convert Selection
+      </button>
+
+      <button id="btn-select-element" class="btn btn-secondary">
+        Select Element
+      </button>
+    </section>
+
+    <section class="status" id="status" style="display: none;">
+      <div class="status-message" id="status-message"></div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="links">
+        <a href="#" id="link-help">Help</a>
+        <span class="separator">•</span>
+        <a href="#" id="link-settings">Settings</a>
+        <span class="separator">•</span>
+        <span class="version">v1.0.0</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

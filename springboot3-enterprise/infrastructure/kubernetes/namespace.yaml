@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: springboot3-enterprise
+  labels:
+    name: springboot3-enterprise
+    environment: production

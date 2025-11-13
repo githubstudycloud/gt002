@@ -1,0 +1,255 @@
+pipeline {
+    agent any
+
+    environment {
+        // 项目配置
+        PROJECT_NAME = 'springboot3-enterprise'
+        MAVEN_HOME = tool 'Maven-3.9'
+        JAVA_HOME = tool 'JDK-17'
+
+        // Docker 配置
+        DOCKER_REGISTRY = 'registry.example.com'
+        DOCKER_CREDENTIALS_ID = 'docker-registry-credentials'
+
+        // Kubernetes 配置
+        K8S_NAMESPACE = 'springboot3-enterprise'
+        K8S_CREDENTIALS_ID = 'k8s-credentials'
+
+        // SonarQube 配置
+        SONAR_HOST = 'http://sonarqube.example.com'
+        SONAR_CREDENTIALS_ID = 'sonarqube-token'
+
+        // Git 配置
+        GIT_COMMIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+        BUILD_VERSION = "${env.BUILD_NUMBER}-${GIT_COMMIT_SHORT}"
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+        timeout(time: 60, unit: 'MINUTES')
+        timestamps()
+    }
+
+    parameters {
+        choice(name: 'DEPLOY_ENV', choices: ['dev', 'test', 'staging', 'prod'], description: '部署环境')
+        choice(name: 'SERVICE_NAME', choices: ['all', 'gateway', 'auth-service', 'user-service', 'order-service', 'product-service'], description: '要部署的服务')
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: '是否跳过测试')
+        booleanParam(name: 'DEPLOY_TO_K8S', defaultValue: true, description: '是否部署到 Kubernetes')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    echo "=== Checkout Code ==="
+                    checkout scm
+                    sh 'git log -1'
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    echo "=== Maven Build ==="
+                    sh """
+                        ${MAVEN_HOME}/bin/mvn clean package -DskipTests=${params.SKIP_TESTS} \
+                        -Drevision=${BUILD_VERSION}
+                    """
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            when {
+                expression { !params.SKIP_TESTS }
+            }
+            steps {
+                script {
+                    echo "=== Running Unit Tests ==="
+                    sh """
+                        ${MAVEN_HOME}/bin/mvn test
+                    """
+                }
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                    jacoco(
+                        execPattern: '**/target/jacoco.exec',
+                        classPattern: '**/target/classes',
+                        sourcePattern: '**/src/main/java'
+                    )
+                }
+            }
+        }
+
+        stage('Code Quality Analysis') {
+            steps {
+                script {
+                    echo "=== SonarQube Analysis ==="
+                    withSonarQubeEnv(credentialsId: SONAR_CREDENTIALS_ID) {
+                        sh """
+                            ${MAVEN_HOME}/bin/mvn sonar:sonar \
+                            -Dsonar.projectKey=${PROJECT_NAME} \
+                            -Dsonar.projectName=${PROJECT_NAME} \
+                            -Dsonar.projectVersion=${BUILD_VERSION}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                script {
+                    echo "=== Waiting for Quality Gate ==="
+                    timeout(time: 10, unit: 'MINUTES') {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "Quality Gate failed: ${qg.status}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    echo "=== Building Docker Images ==="
+                    def services = params.SERVICE_NAME == 'all' ?
+                        ['gateway', 'auth-service', 'user-service', 'order-service', 'product-service'] :
+                        [params.SERVICE_NAME]
+
+                    services.each { service ->
+                        sh """
+                            ${MAVEN_HOME}/bin/mvn jib:build -pl ${service} \
+                            -Djib.to.image=${DOCKER_REGISTRY}/${service}:${BUILD_VERSION} \
+                            -Djib.to.tags=latest \
+                            -Djib.to.auth.username=${DOCKER_USERNAME} \
+                            -Djib.to.auth.password=${DOCKER_PASSWORD}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                script {
+                    echo "=== Docker Image Security Scan ==="
+                    // 使用 Trivy 扫描镜像漏洞
+                    sh """
+                        trivy image --severity HIGH,CRITICAL \
+                        ${DOCKER_REGISTRY}/${params.SERVICE_NAME}:${BUILD_VERSION}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            when {
+                expression { params.DEPLOY_TO_K8S }
+            }
+            steps {
+                script {
+                    echo "=== Deploying to Kubernetes (${params.DEPLOY_ENV}) ==="
+
+                    withKubeConfig(credentialsId: K8S_CREDENTIALS_ID) {
+                        def services = params.SERVICE_NAME == 'all' ?
+                            ['gateway', 'auth-service', 'user-service', 'order-service', 'product-service'] :
+                            [params.SERVICE_NAME]
+
+                        services.each { service ->
+                            sh """
+                                kubectl set image deployment/${service} \
+                                ${service}=${DOCKER_REGISTRY}/${service}:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE} --record
+
+                                kubectl rollout status deployment/${service} \
+                                -n ${K8S_NAMESPACE} --timeout=5m
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Integration Tests') {
+            when {
+                expression { params.DEPLOY_ENV == 'test' || params.DEPLOY_ENV == 'staging' }
+            }
+            steps {
+                script {
+                    echo "=== Running Integration Tests ==="
+                    sh """
+                        ${MAVEN_HOME}/bin/mvn verify -P integration-test
+                    """
+                }
+            }
+        }
+
+        stage('Smoke Tests') {
+            when {
+                expression { params.DEPLOY_TO_K8S }
+            }
+            steps {
+                script {
+                    echo "=== Running Smoke Tests ==="
+                    sleep 30 // 等待服务完全启动
+
+                    // 健康检查
+                    sh """
+                        curl -f http://gateway.${K8S_NAMESPACE}.svc.cluster.local:8080/actuator/health || exit 1
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "=== Pipeline Succeeded ==="
+            // 发送成功通知
+            dingtalk(
+                robot: 'jenkins-dingtalk',
+                type: 'MARKDOWN',
+                title: "构建成功: ${env.JOB_NAME}",
+                text: [
+                    "### 构建成功",
+                    "- 项目: ${PROJECT_NAME}",
+                    "- 分支: ${env.GIT_BRANCH}",
+                    "- 版本: ${BUILD_VERSION}",
+                    "- 环境: ${params.DEPLOY_ENV}",
+                    "- 构建时间: ${currentBuild.durationString}"
+                ]
+            )
+        }
+
+        failure {
+            echo "=== Pipeline Failed ==="
+            // 发送失败通知
+            dingtalk(
+                robot: 'jenkins-dingtalk',
+                type: 'MARKDOWN',
+                title: "构建失败: ${env.JOB_NAME}",
+                text: [
+                    "### 构建失败",
+                    "- 项目: ${PROJECT_NAME}",
+                    "- 分支: ${env.GIT_BRANCH}",
+                    "- 版本: ${BUILD_VERSION}",
+                    "- 失败阶段: ${env.STAGE_NAME}",
+                    "- 构建日志: ${env.BUILD_URL}console"
+                ],
+                atAll: true
+            )
+        }
+
+        always {
+            echo "=== Cleanup ==="
+            cleanWs()
+        }
+    }
+}

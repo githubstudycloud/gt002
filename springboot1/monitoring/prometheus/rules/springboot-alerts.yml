@@ -1,0 +1,126 @@
+groups:
+  - name: springboot_alerts
+    interval: 30s
+    rules:
+      # 应用存活告警
+      - alert: SpringBootAppDown
+        expr: up{job="springboot-apps"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spring Boot应用宕机"
+          description: "{{ $labels.kubernetes_pod_name }} 已经宕机超过1分钟"
+
+      # CPU使用率告警
+      - alert: HighCPUUsage
+        expr: process_cpu_usage{job="springboot-apps"} > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU使用率过高"
+          description: "{{ $labels.kubernetes_pod_name }} CPU使用率超过80%,当前值: {{ $value | humanizePercentage }}"
+
+      # 内存使用率告警
+      - alert: HighMemoryUsage
+        expr: jvm_memory_used_bytes{job="springboot-apps",area="heap"} / jvm_memory_max_bytes{job="springboot-apps",area="heap"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "内存使用率过高"
+          description: "{{ $labels.kubernetes_pod_name }} 堆内存使用率超过85%,当前值: {{ $value | humanizePercentage }}"
+
+      # GC时间告警
+      - alert: HighGCTime
+        expr: rate(jvm_gc_pause_seconds_sum{job="springboot-apps"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GC时间过长"
+          description: "{{ $labels.kubernetes_pod_name }} GC时间占比超过10%"
+
+      # 请求错误率告警
+      - alert: HighErrorRate
+        expr: sum(rate(http_server_requests_seconds_count{job="springboot-apps",status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{job="springboot-apps"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP错误率过高"
+          description: "5xx错误率超过5%,当前值: {{ $value | humanizePercentage }}"
+
+      # 响应时间告警
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job="springboot-apps"}[5m])) by (le, uri)) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "响应时间过长"
+          description: "{{ $labels.uri }} P95响应时间超过1秒,当前值: {{ $value }}s"
+
+      # 数据库连接池告警
+      - alert: LowDatabaseConnections
+        expr: hikaricp_connections_active{job="springboot-apps"} / hikaricp_connections_max{job="springboot-apps"} > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "数据库连接池使用率过高"
+          description: "{{ $labels.kubernetes_pod_name }} 数据库连接池使用率超过80%"
+
+      # 线程池告警
+      - alert: HighThreadPoolUsage
+        expr: tomcat_threads_busy_threads{job="springboot-apps"} / tomcat_threads_config_max_threads{job="springboot-apps"} > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "线程池使用率过高"
+          description: "{{ $labels.kubernetes_pod_name }} 线程池使用率超过80%"
+
+  - name: infrastructure_alerts
+    interval: 30s
+    rules:
+      # MySQL告警
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL数据库宕机"
+          description: "MySQL实例 {{ $labels.instance }} 已经宕机"
+
+      # Redis告警
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis缓存宕机"
+          description: "Redis实例 {{ $labels.instance }} 已经宕机"
+
+      # RabbitMQ告警
+      - alert: RabbitMQDown
+        expr: rabbitmq_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RabbitMQ消息队列宕机"
+          description: "RabbitMQ实例 {{ $labels.instance }} 已经宕机"
+
+      # 磁盘空间告警
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "磁盘空间不足"
+          description: "节点 {{ $labels.instance }} 磁盘使用率超过80%"

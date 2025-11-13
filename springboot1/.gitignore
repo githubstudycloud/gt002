@@ -1,0 +1,110 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle
+build/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Operating System
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+log/
+
+# Docker volumes
+docker/mysql/data/
+docker/postgres/data/
+docker/redis/data/
+docker/rabbitmq/data/
+docker/nacos/logs/
+docker/elasticsearch/data/
+docker/prometheus/data/
+docker/grafana/data/
+docker/minio/data/
+docker/nginx/logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Spring Boot
+application-local.yml
+application-local.properties
+
+# Security
+*.key
+*.pem
+*.p12
+*.jks
+secrets/
+
+# Node modules (if any frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+
+# IDE generated
+.factorypath
+.apt_generated
+.apt_generated_tests
+
+# JVM crash logs
+hs_err_pid*
+heapdump.hprof
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.rar
+*.tar
+*.zip
