@@ -1,153 +1,52 @@
-# Docker 镜像文件
+# Docker 镜像目录
 
-本目录包含 Claude Relay Service 的 Docker 镜像文件,用于离线部署。
+## 说明
 
-## 📦 镜像列表
+此目录用于存放 Docker 镜像文件，用于离线部署。
 
-### 1. claude-relay-service:latest (129MB)
+## 构建镜像（有 Docker 环境）
 
-主应用镜像,包含:
-- Node.js 18 运行环境
-- Claude Relay Service 应用代码
-- 前端静态文件 (Vue.js)
-- 所有依赖包
-
-**文件分卷** (GitHub 文件大小限制):
-- `claude-relay-service.tar.gz.part-aa` - 45MB
-- `claude-relay-service.tar.gz.part-ab` - 45MB
-- `claude-relay-service.tar.gz.part-ac` - 39MB
-
-### 2. redis:7-alpine (17MB)
-
-Redis 数据库镜像:
-- Redis 7.x 版本
-- Alpine Linux 基础镜像
-- 轻量级构建
-
-**单文件**:
-- `redis.tar.gz` - 17MB
-
-## 🔐 文件完整性
-
-所有镜像文件都包含 SHA256 校验和,存储在 `checksums.txt` 中。
-
-**校验命令**:
-```bash
-cd images
-sha256sum -c checksums.txt
-```
-
-**预期输出**:
-```
-claude-relay-service.tar.gz.part-aa: OK
-claude-relay-service.tar.gz.part-ab: OK
-claude-relay-service.tar.gz.part-ac: OK
-redis.tar.gz: OK
-```
-
-## 📊 镜像信息
-
-| 镜像 | 大小 | 文件数 | SHA256 (首8位) |
-|------|------|--------|----------------|
-| claude-relay-service | 129MB | 3个分卷 | 4ebdd8c4 |
-| redis | 17MB | 1个文件 | d558b45b |
-
-**总大小**: 146MB
-
-## 🚀 加载镜像
-
-### 自动加载 (推荐)
-
-使用根目录的 `load-images.sh` 脚本:
-```bash
-cd ..
-./load-images.sh
-```
-
-脚本会自动:
-1. 验证文件完整性
-2. 合并分卷文件
-3. 解压并加载到 Docker
-
-### 手动加载
+如果您有 Docker 环境，请运行以下命令构建和导出镜像：
 
 ```bash
-# 1. 合并 claude-relay-service 分卷
-cat claude-relay-service.tar.gz.part-* > claude-relay-service.tar.gz
-
-# 2. 加载镜像
-gunzip -c claude-relay-service.tar.gz | docker load
-gunzip -c redis.tar.gz | docker load
-
-# 3. 验证
-docker images | grep -E "claude-relay|redis"
+# 在项目根目录运行
+./build.sh              # 构建镜像
+./export-images.sh      # 导出并分卷镜像
 ```
 
-## 🔄 更新日期
+## 镜像文件
 
-- **构建时间**: 2025-11-13
-- **导出时间**: 2025-11-13 11:54 UTC+8
-- **测试状态**: ✅ 已验证
-- **测试环境**: Ubuntu 22.04 / Docker 24.x
+构建完成后，此目录将包含以下文件：
 
-## ⚠️ 注意事项
+- `claude-relay-service.tar.gz.part-*` - Claude Relay Service 镜像分卷文件
+- `redis.tar.gz.part-*` - Redis 镜像分卷文件（或完整文件）
+- `checksums.txt` - SHA256 校验和文件
 
-1. **文件分卷**: claude-relay-service 镜像因 GitHub 限制被分成3个文件,需要先合并
-2. **校验和验证**: 下载后务必验证校验和,确保文件完整性
-3. **Docker版本**: 建议使用 Docker 20.10+ 和 docker-compose 1.29+
-4. **磁盘空间**: 确保有至少 500MB 的可用空间
+## 使用镜像
 
-## 🐛 故障排查
+在内网服务器上：
 
-### 问题1: 校验和失败
-
-**可能原因**: 下载不完整或文件损坏
-
-**解决方案**:
 ```bash
-# 重新下载文件
-rm -f claude-relay-service.tar.gz.part-*
-git pull origin master
-
-# 重新验证
-sha256sum -c checksums.txt
+./load-images.sh        # 自动合并分卷并加载镜像
 ```
 
-### 问题2: 镜像加载失败
+## 注意事项
 
-**错误示例**: `Error loading image`
+1. 镜像文件较大（总计约 500MB），已分卷为 45MB 小文件
+2. 分卷文件必须全部存在才能正确合并
+3. 加载前会自动验证文件完整性
+4. 如果此目录为空，说明镜像尚未构建
 
-**解决方案**:
-```bash
-# 确保 Docker 正在运行
-docker ps
+## 无 Docker 环境？
 
-# 手动加载并查看错误
-gunzip -c claude-relay-service.tar.gz | docker load
-```
+如果当前环境没有 Docker：
 
-### 问题3: 分卷合并失败
+1. 在有 Docker 的机器上运行 `build.sh` 和 `export-images.sh`
+2. 将 images 目录的所有文件复制到此处
+3. 提交到 Git 或通过其他方式传输到内网服务器
 
-**错误示例**: `gzip: invalid compressed data`
+## 文件大小限制
 
-**解决方案**:
-```bash
-# 检查所有分卷文件是否存在
-ls -lh claude-relay-service.tar.gz.part-*
+Git 默认单文件限制 50MB，我们的分卷策略（45MB/个）确保可以正常提交。
 
-# 清理旧文件后重新合并
-rm -f claude-relay-service.tar.gz
-cat claude-relay-service.tar.gz.part-* > claude-relay-service.tar.gz
-```
-
-## 📚 相关文档
-
-- [../README.md](../README.md) - 主文档
-- [../OFFLINE-DEPLOYMENT-VERIFIED.md](../OFFLINE-DEPLOYMENT-VERIFIED.md) - 离线部署验证报告
-- [../load-images.sh](../load-images.sh) - 自动加载脚本
-
----
-
-**镜像来源**: https://github.com/Wei-Shaw/claude-relay-service
-**本地构建**: Ubuntu 22.04 / Docker 24.x
-**验证状态**: ✅ 完整性已验证,部署测试通过
+如果使用 Git LFS，可以不分卷直接提交完整镜像文件。

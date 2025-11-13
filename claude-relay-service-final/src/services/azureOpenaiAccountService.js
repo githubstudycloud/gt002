@@ -125,9 +125,26 @@ async function createAccount(accountData) {
     apiVersion: accountData.apiVersion || '2024-02-01', // 使用稳定版本
     deploymentName: accountData.deploymentName || 'gpt-4', // 使用默认部署名称
     apiKey: encrypt(accountData.apiKey || ''),
-    // 支持的模型
+    // 支持的模型 - 默认支持 Claude 和 GPT 模型（用于自定义模型代理）
     supportedModels: JSON.stringify(
-      accountData.supportedModels || ['gpt-4', 'gpt-4-turbo', 'gpt-35-turbo', 'gpt-35-turbo-16k']
+      accountData.supportedModels || [
+        // Claude 模型（用于自定义模型映射）
+        'claude-sonnet-4-5-20250929',
+        'claude-opus-4-1-20250805',
+        'claude-sonnet-4-20250514',
+        'claude-3-5-sonnet-20241022',
+        'claude-3-5-haiku-20241022',
+        'claude-3-opus-20240229',
+        'claude-3-sonnet-20240229',
+        'claude-3-haiku-20240307',
+        // GPT 模型（原有支持）
+        'gpt-4',
+        'gpt-4-turbo',
+        'gpt-4o',
+        'gpt-4o-mini',
+        'gpt-35-turbo',
+        'gpt-35-turbo-16k'
+      ]
     ),
 
     // ✅ 新增：账户订阅到期时间（业务字段，手动管理）
@@ -188,7 +205,13 @@ async function getAccount(accountId) {
     try {
       accountData.supportedModels = JSON.parse(accountData.supportedModels)
     } catch (e) {
-      accountData.supportedModels = ['gpt-4', 'gpt-35-turbo']
+      // 解析失败时使用默认的 Claude 和 GPT 模型
+      accountData.supportedModels = [
+        'claude-3-5-sonnet-20241022',
+        'claude-3-opus-20240229',
+        'gpt-4',
+        'gpt-35-turbo'
+      ]
     }
   }
 
@@ -307,7 +330,13 @@ async function getAllAccounts() {
         try {
           accountData.supportedModels = JSON.parse(accountData.supportedModels)
         } catch (e) {
-          accountData.supportedModels = ['gpt-4', 'gpt-35-turbo']
+          // 解析失败时使用默认的 Claude 和 GPT 模型
+          accountData.supportedModels = [
+            'claude-3-5-sonnet-20241022',
+            'claude-3-opus-20240229',
+            'gpt-4',
+            'gpt-35-turbo'
+          ]
         }
       }
 
